@@ -1,0 +1,24 @@
+name: Interference
+options:
+  deploymentTarget:
+    iOS: "26.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    CODE_SIGN_IDENTITY: "-"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "0.1.0"
+targets:
+  Interference:
+    type: application
+    platform: iOS
+    sources: [Sources/Interference]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.shahidy.interference
+        PRODUCT_NAME: Interference
+        INFOPLIST_FILE: Info.plist
+        GENERATE_INFOPLIST_FILE: YES

@@ -1,0 +1,45 @@
+#!/bin/sh
+# Builds the app for the simulator on the Mac and screenshots it on the iPhone Duo, folded and open, light and dark,
+# into <folder> here. The simulator has no magnetometer, so the page waits on its first step.
+# Usage: scripts/shots <folder>
+set -e
+out=${1:?usage: scripts/shots <folder>}
+cd "$(dirname "$0")/.."
+rsync -a --delete --exclude .build --exclude xtool --exclude build app/ mac:Developer/interference-app/
+rsync -a ~/Developer/hangar/scripts/devicehub.c mac:Developer/interference-app/
+ssh mac sh -s <<'MAC'
+set -e
+cd ~/Developer/interference-app
+xcodegen -q
+xcodebuild -project Interference.xcodeproj -scheme Interference -destination 'generic/platform=iOS Simulator' -derivedDataPath build build -quiet
+[ build/devicehub -nt devicehub.c ] || xcrun -sdk iphonesimulator clang -arch arm64 -mios-simulator-version-min=27.0 -O2 \
+  -o build/devicehub devicehub.c -framework IOKit -framework CoreFoundation
+codesign -f -s - build/devicehub 2>/dev/null
+id=$(xcrun simctl list devices | awk -F '[()]' '/interference Duo/ {print $2; exit}')
+[ -n "$id" ] || id=$(xcrun simctl create "interference Duo" com.apple.CoreSimulator.SimDeviceType.iPhone-Duo)
+xcrun simctl boot "$id" 2>/dev/null || true
+xcrun simctl bootstatus "$id" -b >/dev/null
+xcrun simctl install "$id" build/Build/Products/Debug-iphonesimulator/Interference.app
+xcrun simctl status_bar "$id" override --time 9:41 --batteryState charged --batteryLevel 100
+rm -rf shots && mkdir shots
+while read -r screen hinge orientation display; do
+  xcrun simctl spawn "$id" "$PWD/build/devicehub" hinge "$hinge"
+  sleep 3
+  xcrun simctl spawn "$id" "$PWD/build/devicehub" orientation "$orientation"
+  sleep 2
+  for appearance in light dark; do
+    xcrun simctl ui "$id" appearance "$appearance"
+    xcrun simctl terminate "$id" com.shahidy.interference 2>/dev/null || true
+    xcrun simctl launch "$id" com.shahidy.interference >/dev/null
+    sleep 5
+    xcrun simctl io "$id" screenshot --display="$display" "shots/$screen-$appearance.png" >/dev/null 2>&1
+  done
+done <<SCREENS
+folded-portrait 0 portrait 1
+open-landscape 180 portrait 3
+SCREENS
+xcrun simctl shutdown "$id"
+MAC
+mkdir -p "$out"
+rsync -a mac:Developer/interference-app/shots/ "$out/"
+ls "$out"
