@@ -29,6 +29,7 @@ struct Page: UIViewRepresentable {
         let config = WKWebViewConfiguration()
         config.userContentController.addUserScript(
             WKUserScript(source: "window.magnetApp = true", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        config.userContentController.add(Haptic(), name: "haptic")
         let view = WKWebView(frame: .zero, configuration: config)
         view.isOpaque = false
         view.backgroundColor = .systemBackground
@@ -56,6 +57,15 @@ final class Feed {
             view.evaluateJavaScript(
                 String(format: "window.magnet && magnet(%.2f, %.2f, %.2f, %.3f)", field.x, field.y, field.z, turn))
         }
+    }
+}
+
+/// A tap felt when the page has caught the other phone at an edge.
+final class Haptic: NSObject, WKScriptMessageHandler {
+    private let feedback = UIImpactFeedbackGenerator(style: .rigid)
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        feedback.impactOccurred()
     }
 }
 
