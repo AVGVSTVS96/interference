@@ -1,0 +1,6 @@
+/config
+/app/.build/
+/app/xtool/
+/app/*.xcodeproj
+/app/build/
+.DS_Store
